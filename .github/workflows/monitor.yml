@@ -1,0 +1,44 @@
+name: Monitor de promoções
+
+on:
+  schedule:
+    # Uma vez por hora, no minuto 17 (evita o horário cheio, quando o GitHub fica mais congestionado). Fuso: UTC.
+    - cron: '17 * * * *'
+  workflow_dispatch: # permite executar manualmente pela aba Actions
+
+# Impede duas execuções simultâneas (evita notificações duplicadas).
+# Se uma execução demorar, a próxima espera na fila em vez de rodar em paralelo.
+concurrency:
+  group: gamedeals-monitor
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+      - name: Executar monitoramento
+        run: npm run monitor
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
